@@ -1,4 +1,2 @@
-import PlaceholderScreen from '../../src/screens/PlaceholderScreen';
-export default function Perfil() {
-  return <PlaceholderScreen label="Tu perfil" />;
-}
+import ProfileScreen from '../../src/screens/ProfileScreen';
+export default ProfileScreen;
