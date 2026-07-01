@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "bufy",
+    "slug": "bufy",
+    "scheme": "bufy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bufy.app"
+    },
+    "android": {
+      "package": "com.bufy.app"
+    }
+  }
+}

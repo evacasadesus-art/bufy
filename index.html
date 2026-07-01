@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="bufy organiza tus comidas de la semana, te dice qué cocinar y genera tu lista de la compra. Prueba gratis 14 días. Solo 3,49 €/mes." />
+  <meta property="og:title" content="bufy — Cocina bien. Sin complicarte." />
+  <meta property="og:description" content="Menús semanales, lista de la compra automática y el Hospital de la Nevera. Todo en una app, todo por menos de lo que cuesta un café." />
+  <meta property="og:url" content="https://bufyapp.com" />
+  <title>bufy — Cocina bien. Sin complicarte.</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    /* ─── Tokens ─────────────────────────────────────────── */
+    :root {
+      --crema:        #F6F3ED;
+      --salvia:       #BFD2D2;
+      --carbon:       #262626;
+      --greige:       #B7ADA2;
+      --oliva:        #5E7154;
+      --coral:        #F06A4B;
+      --piedra:       #6F6A64;
+      --blanco:       #FAFAF8;
+
+      --f-title:      'Playfair Display', Georgia, serif;
+      --f-body:       'Inter', system-ui, sans-serif;
+
+      --r-sm:  8px;
+      --r-md:  12px;
+      --r-lg:  20px;
+      --r-full: 999px;
+
+      --max-w: 1160px;
+      --gutter: clamp(20px, 5vw, 40px);
+    }
+
+    /* ─── Base ───────────────────────────────────────────── */
+    html { overflow-x: hidden; }
+    body {
+      font-family: var(--f-body);
+      background: var(--crema);
+      color: var(--carbon);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 { font-family: var(--f-title); color: var(--carbon); line-height: 1.15; }
+    p { color: var(--piedra); line-height: 1.75; }
+    a { text-decoration: none; }
+    img { display: block; width: 100%; }
+
+    /* ─── Layout helpers ─────────────────────────────────── */
+    .wrap {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding-left: var(--gutter);
+      padding-right: var(--gutter);
+    }
+    section { padding: clamp(96px, 13vw, 144px) 0; }
+
+    /* ─── Typography ─────────────────────────────────────── */
+    .t-display {
+      font-family: var(--f-title);
+      font-size: clamp(2.25rem, 5vw, 3.5rem);
+      font-weight: 600;
+      color: var(--carbon);
+    }
+    .t-section {
+      font-family: var(--f-title);
+      font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+      font-weight: 600;
+      color: var(--carbon);
+    }
+    .t-card {
+      font-family: var(--f-title);
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--carbon);
+    }
+    .t-body  { font-family: var(--f-body); font-size: 1rem;   color: var(--piedra); }
+    .t-small { font-family: var(--f-body); font-size: 0.85rem; color: var(--piedra); }
+    .t-label {
+      font-family: var(--f-body);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--piedra);
+    }
+
+    /* ─── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--f-body);
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-coral {
+      background: var(--coral);
+      color: var(--blanco);
+      padding: 14px 28px;
+      border-radius: var(--r-full);
+    }
+    .btn-coral-sm {
+      background: var(--coral);
+      color: var(--blanco);
+      padding: 11px 22px;
+      border-radius: var(--r-full);
+      font-size: 0.88rem;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--carbon);
+      padding: 11px 22px;
+      border-radius: var(--r-full);
+      border: 1.5px solid var(--greige);
+      font-size: 0.88rem;
+    }
+    .btn-ghost:hover { border-color: var(--carbon); }
+
+    /* ─── Animations ─────────────────────────────────────── */
+    .fade {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .fade.in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fade.d1 { transition-delay: 0.1s; }
+    .fade.d2 { transition-delay: 0.2s; }
+    .fade.d3 { transition-delay: 0.3s; }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  NAV                                                    */
+    /* ─────────────────────────────────────────────────────── */
+    #nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(246, 243, 237, 0.93);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(183,173,162,0.28);
+    }
+    #nav .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 15px;
+      padding-bottom: 15px;
+    }
+    .nav-logo {
+      font-family: var(--f-title);
+      font-size: 1.55rem;
+      font-weight: 600;
+      color: var(--carbon);
+      letter-spacing: -0.02em;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .nav-price {
+      font-size: 0.83rem;
+      color: var(--piedra);
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  HERO                                                   */
+    /* ─────────────────────────────────────────────────────── */
+    #hero {
+      background: var(--crema);
+      padding-top: 120px;
+      padding-bottom: clamp(96px, 13vw, 144px);
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(40px, 6vw, 80px);
+      align-items: center;
+    }
+    .hero-eyebrow { margin-bottom: 20px; }
+    .hero-title {
+      margin-bottom: 0;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 1.5vw, 1.1rem);
+      color: var(--piedra);
+      margin-bottom: 40px;
+      max-width: 480px;
+    }
+    .hero-question-sub {
+      font-family: var(--f-body);
+      font-size: clamp(1rem, 1.5vw, 1.15rem);
+      color: var(--piedra);
+      margin-top: 16px;
+      margin-bottom: 12px;
+    }
+    .hero-close {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(2rem, 3.5vw, 2.75rem);
+      font-weight: 700;
+      color: var(--carbon);
+      line-height: 1.1;
+      margin-bottom: 36px;
+    }
+    .hero-cta-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .hero-img-wrap {
+      position: relative;
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      aspect-ratio: 4 / 5;
+      background: linear-gradient(145deg, var(--salvia) 0%, #a5c4c4 100%);
+    }
+    .hero-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  PROBLEM                                                */
+    /* ─────────────────────────────────────────────────────── */
+    #problema { background: var(--crema); border-top: 1px solid rgba(183,173,162,0.25); }
+    .section-header { text-align: center; margin-bottom: clamp(48px, 7vw, 80px); }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+    .prob-card {
+      background: var(--blanco);
+      border-radius: var(--r-md);
+      padding: clamp(44px, 5.5vw, 64px) clamp(36px, 4vw, 48px);
+      border: 1px solid rgba(183,173,162,0.22);
+    }
+    .prob-card .t-card {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      color: var(--carbon);
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  SOLUTION                                               */
+    /* ─────────────────────────────────────────────────────── */
+    #solucion { background: var(--salvia); }
+    .sol-inner {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .sol-inner .t-section { margin-bottom: 20px; }
+    .sol-inner .t-body { font-size: 1.1rem; }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  FEATURES                                               */
+    /* ─────────────────────────────────────────────────────── */
+    #funcionalidades { background: var(--crema); }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    .feat-card {
+      background: var(--blanco);
+      border-radius: var(--r-md);
+      padding: clamp(32px, 4vw, 48px) clamp(28px, 3.5vw, 40px);
+      border: 1px solid rgba(183,173,162,0.22);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .feat-card:nth-child(5) {
+      grid-column: 1 / -1;
+      max-width: calc(50% - 12px);
+      margin: 0 auto;
+      width: 100%;
+    }
+    .feat-icon {
+      width: 60px;
+      height: 60px;
+      background: var(--salvia);
+      border-radius: var(--r-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .feat-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--carbon);
+      stroke-width: 1.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .feat-card .t-card {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(1.2rem, 2vw, 1.5rem);
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+    .feat-card .t-body { font-size: 0.93rem; line-height: 1.65; }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  HOW IT WORKS                                           */
+    /* ─────────────────────────────────────────────────────── */
+    #como { background: var(--crema); border-top: 1px solid rgba(183,173,162,0.25); }
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(32px, 5vw, 56px);
+      position: relative;
+    }
+    .steps-row::before {
+      content: '';
+      position: absolute;
+      top: 48px;
+      left: calc(16.6% + 24px);
+      right: calc(16.6% + 24px);
+      height: 1px;
+      background: var(--greige);
+      pointer-events: none;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 32px;
+    }
+    .step-num {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: var(--coral);
+      color: var(--blanco);
+      font-family: var(--f-title);
+      font-size: 2.2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .step .t-body { max-width: 280px; font-size: 1rem; }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  PRICING                                                */
+    /* ─────────────────────────────────────────────────────── */
+    #precio { background: var(--salvia); }
+    .price-center { text-align: center; }
+    .price-center .t-section { margin-bottom: clamp(36px, 5vw, 56px); }
+    .price-card {
+      background: var(--crema);
+      border-radius: var(--r-lg);
+      padding: clamp(36px, 5vw, 60px) clamp(28px, 4vw, 56px);
+      max-width: 460px;
+      margin: 0 auto 40px;
+      border: 1px solid rgba(183,173,162,0.28);
+      text-align: center;
+    }
+    .price-amount {
+      font-family: var(--f-title);
+      font-size: clamp(3rem, 8vw, 4.5rem);
+      font-weight: 600;
+      color: var(--carbon);
+      line-height: 1;
+    }
+    .price-mo {
+      font-size: 0.95rem;
+      color: var(--piedra);
+      margin-bottom: 28px;
+      display: block;
+      margin-top: 4px;
+    }
+    .price-list {
+      list-style: none;
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .price-list li {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.92rem;
+      color: var(--piedra);
+    }
+    .price-list li svg {
+      width: 15px;
+      height: 15px;
+      stroke: var(--oliva);
+      stroke-width: 2.2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .price-trial {
+      font-size: 0.9rem;
+      color: var(--piedra);
+      margin-bottom: 28px;
+    }
+    .price-cancel {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--piedra);
+      margin-top: 10px;
+    }
+    .price-tagline {
+      font-family: var(--f-title);
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      font-style: italic;
+      color: var(--carbon);
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  NEWSLETTER                                             */
+    /* ─────────────────────────────────────────────────────── */
+    #newsletter { background: var(--crema); border-top: 1px solid rgba(183,173,162,0.25); }
+    .nl-inner {
+      max-width: 540px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .nl-inner .t-section { font-size: clamp(1.5rem, 3vw, 2.25rem); margin-bottom: 14px; }
+    .nl-inner .t-body { margin-bottom: 36px; }
+    .nl-form {
+      display: flex;
+      gap: 10px;
+    }
+    .nl-input {
+      flex: 1;
+      padding: 14px 18px;
+      border: 1.5px solid var(--greige);
+      border-radius: var(--r-full);
+      background: var(--blanco);
+      font-family: var(--f-body);
+      font-size: 0.95rem;
+      color: var(--carbon);
+      outline: none;
+      transition: border-color 0.18s ease;
+      min-width: 0;
+    }
+    .nl-input::placeholder { color: var(--greige); }
+    .nl-input:focus { border-color: var(--carbon); }
+    .nl-ok {
+      display: none;
+      margin-top: 18px;
+      font-size: 0.9rem;
+      color: var(--oliva);
+      font-weight: 500;
+    }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  FOOTER                                                 */
+    /* ─────────────────────────────────────────────────────── */
+    #footer {
+      background: var(--carbon);
+      padding: clamp(48px, 7vw, 72px) 0 clamp(28px, 4vw, 36px);
+    }
+    .footer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+    .footer-logo {
+      font-family: var(--f-title);
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--blanco);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .footer-tagline {
+      font-family: var(--f-title);
+      font-style: italic;
+      font-size: 0.95rem;
+      color: rgba(250,250,248,0.45);
+    }
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+    }
+    .footer-social {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.85rem;
+      color: rgba(250,250,248,0.55);
+      transition: color 0.18s ease;
+    }
+    .footer-social:hover { color: var(--blanco); }
+    .footer-social svg { width: 15px; height: 15px; fill: currentColor; }
+    .footer-divider {
+      height: 1px;
+      background: rgba(183,173,162,0.18);
+      margin-bottom: 24px;
+    }
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-copy {
+      font-size: 0.78rem;
+      color: rgba(250,250,248,0.35);
+    }
+    .footer-legal {
+      display: flex;
+      gap: 20px;
+    }
+    .footer-legal a {
+      font-size: 0.78rem;
+      color: rgba(250,250,248,0.35);
+      transition: color 0.18s ease;
+    }
+    .footer-legal a:hover { color: rgba(250,250,248,0.7); }
+
+    /* ─────────────────────────────────────────────────────── */
+    /*  RESPONSIVE                                             */
+    /* ─────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-img-wrap { aspect-ratio: 16/9; order: -1; }
+      .hero-cta-stack { align-items: center; }
+      .hero-title, .hero-sub { text-align: center; }
+      .hero-eyebrow { text-align: center; }
+    }
+
+    @media (max-width: 700px) {
+      .problem-grid { grid-template-columns: 1fr; gap: 20px; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .feat-card:nth-child(5) { grid-column: auto; max-width: 100%; }
+      .steps-row { grid-template-columns: 1fr; gap: 32px; }
+      .steps-row::before { display: none; }
+      .step { flex-direction: row; text-align: left; gap: 24px; }
+      .step .t-body { max-width: none; }
+      .step-num { width: 72px; height: 72px; font-size: 1.7rem; flex-shrink: 0; }
+      .footer-top { flex-direction: column; }
+      .footer-links { align-items: flex-start; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-price { display: none; }
+      .nl-form { flex-direction: column; }
+      .nl-form .btn-coral { width: 100%; justify-content: center; }
+      .price-card { padding: 36px 22px; }
+      .footer-bottom { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     NAV
+══════════════════════════════════════════════════════════ -->
+<header id="nav" role="banner">
+  <div class="wrap">
+    <a href="#" class="nav-logo">bufy</a>
+    <div class="nav-right">
+      <span class="nav-price">14 días gratis</span>
+      <a href="#" class="btn btn-coral-sm">Probar gratis →</a>
+    </div>
+  </div>
+</header>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════ -->
+<section id="hero" aria-label="Presentación">
+  <div class="wrap">
+    <div class="hero-grid">
+
+      <!-- Texto -->
+      <div class="fade">
+        <span class="t-label hero-eyebrow">La app de cocina que necesitabas</span>
+        <h1 class="t-display hero-title">Buf, ¿qué hago de comer?</h1>
+        <p class="hero-question-sub">La pregunta de todos los días.</p>
+        <p class="hero-close">Eso se acabó.</p>
+        <p class="t-body hero-sub">
+          bufy organiza tus comidas de la semana, te dice qué cocinar y genera tu lista de la compra.
+          Todo en una app. Todo por menos de lo que cuesta un café.
+        </p>
+        <div class="hero-cta-stack">
+          <a href="#" class="btn btn-coral">Prueba bufy gratis 14 días →</a>
+          <span class="t-small">Después, solo 3,49 €/mes. Cancela cuando quieras.</span>
+        </div>
+      </div>
+
+      <!-- Imagen -->
+      <div class="hero-img-wrap fade d2">
+        <img
+          src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=80"
+          alt="Comida mediterránea con luz natural sobre superficie de madera"
+          loading="eager"
+          onerror="this.style.display='none'"
+        />
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     PROBLEMA
+══════════════════════════════════════════════════════════ -->
+<section id="problema" aria-label="El problema">
+  <div class="wrap">
+    <div class="section-header fade">
+      <h2 class="t-section">¿Te suena?</h2>
+    </div>
+    <div class="problem-grid">
+
+      <div class="prob-card fade">
+        <h3 class="t-card">"¿Qué hacemos de comer?"</h3>
+        <p class="t-body">La pregunta que nadie quiere responder. Cada día. Dos veces al día. El agotamiento de decidir es real.</p>
+      </div>
+
+      <div class="prob-card fade d1">
+        <h3 class="t-card">"Esto se ha puesto malo"</h3>
+        <p class="t-body">Media lechuga olvidada, el yogur caducado, el tomate blando del fondo de la nevera. Comida a la basura y dinero con ella.</p>
+      </div>
+
+      <div class="prob-card fade d2">
+        <h3 class="t-card">"No tengo tiempo para cocinar sano"</h3>
+        <p class="t-body">Quieres comer bien, pero la vida real se mete por medio. Acaba siendo un sándwich rápido o pedir comida.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SOLUCIÓN
+══════════════════════════════════════════════════════════ -->
+<section id="solucion" aria-label="La solución">
+  <div class="wrap">
+    <div class="sol-inner fade">
+      <h2 class="t-section">bufy se encarga de pensar por ti.</h2>
+      <p class="t-body">
+        Una app que organiza tus comidas semanales, aprovecha cada ingrediente que compras y te dice exactamente qué cocinar.
+        Comida real, recetas normales, cero estrés.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     FUNCIONALIDADES
+══════════════════════════════════════════════════════════ -->
+<section id="funcionalidades" aria-label="Funcionalidades">
+  <div class="wrap">
+    <div class="section-header fade">
+      <h2 class="t-section">Todo lo que necesitas.<br>Nada que no necesites.</h2>
+    </div>
+    <div class="feat-grid">
+
+      <!-- 1. Menú semanal -->
+      <div class="feat-card fade">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="8" y1="15" x2="16" y2="15"/>
+            <line x1="8" y1="18" x2="13" y2="18"/>
+          </svg>
+        </div>
+        <h3 class="t-card" style="font-family: 'Playfair Display', serif; font-size: 1.4rem;">Menú semanal inteligente</h3>
+        <p class="t-body">
+          Cada ingrediente que abres aparece repartido en varios platos de la semana.
+          Tu nevera queda vacía el viernes. Con modo audio para cocinar sin tocar la pantalla.
+        </p>
+      </div>
+
+      <!-- 2. Hospital de la nevera -->
+      <div class="feat-card fade d1">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="5" y="2" width="14" height="20" rx="2"/>
+            <line x1="5" y1="10" x2="19" y2="10"/>
+            <line x1="9" y1="6" x2="9" y2="8"/>
+            <circle cx="16" cy="17" r="2" stroke="var(--coral)" stroke-width="1.6"/>
+            <line x1="16" y1="15.5" x2="16" y2="16.5"/>
+            <circle cx="16" cy="17.8" r="0.3" fill="var(--coral)" stroke="none"/>
+          </svg>
+        </div>
+        <h3 class="t-card" style="font-family: 'Playfair Display', serif; font-size: 1.4rem;">El Hospital de la Nevera</h3>
+        <p class="t-body">
+          Foto a tu nevera y la IA te dice qué se está poniendo feo primero.
+          Te propone una receta para aprovecharlo todo. Etiquetas verde, naranja o rojo.
+        </p>
+      </div>
+
+      <!-- 3. Lista de la compra -->
+      <div class="feat-card fade">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <polyline points="9 10 12 13 15 10"/>
+          </svg>
+        </div>
+        <h3 class="t-card" style="font-family: 'Playfair Display', serif; font-size: 1.4rem;">Lista de la compra automática</h3>
+        <p class="t-body">
+          Se genera sola a partir de tu menú. Compra mensual y semanal separadas, más productos del hogar.
+          Un botón te lleva directo a la web de tu súper favorito. ¿Prefieres el papel? Descárgala en PDF y llévala impresa.
+        </p>
+      </div>
+
+      <!-- 4. Monedero -->
+      <div class="feat-card fade d1">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="1" y="5" width="22" height="14" rx="2"/>
+            <line x1="1" y1="10" x2="23" y2="10"/>
+            <line x1="5" y1="15.5" x2="9" y2="15.5" stroke-linecap="round" stroke-width="2"/>
+          </svg>
+        </div>
+        <h3 class="t-card" style="font-family: 'Playfair Display', serif; font-size: 1.4rem;">Tu monedero</h3>
+        <p class="t-body">
+          Todas tus tarjetas de fidelización en un sitio.
+          Las enseñas en caja sin buscar entre apps. Rápido y sin líos.
+        </p>
+      </div>
+
+      <!-- 5. Perfil nutricional -->
+      <div class="feat-card fade">
+        <div class="feat-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <h3 class="t-card" style="font-family: 'Playfair Display', serif; font-size: 1.4rem;">Tu perfil nutricional</h3>
+        <p class="t-body">
+          Configura alergias, intolerancias, restricciones y objetivos.
+          bufy adapta todos los menús automáticamente, sin que tengas que pensar en ello.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     CÓMO FUNCIONA
+══════════════════════════════════════════════════════════ -->
+<section id="como" aria-label="Cómo funciona">
+  <div class="wrap">
+    <div class="section-header fade">
+      <h2 class="t-section">Así de fácil.</h2>
+    </div>
+    <div class="steps-row">
+
+      <div class="step fade">
+        <div class="step-num">1</div>
+        <p class="t-body">Dile a bufy cómo comes: alergias, gustos, objetivos. En 2 minutos.</p>
+      </div>
+
+      <div class="step fade d1">
+        <div class="step-num">2</div>
+        <p class="t-body">Cada semana recibes tu menú completo y tu lista de la compra lista para usar.</p>
+      </div>
+
+      <div class="step fade d2">
+        <div class="step-num">3</div>
+        <p class="t-body">Cocina, disfruta y deja de tirar comida. Ya está.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     PRECIO
+══════════════════════════════════════════════════════════ -->
+<section id="precio" aria-label="Precio">
+  <div class="wrap">
+    <div class="price-center">
+      <h2 class="t-section fade">Un plan. Todo incluido. Sin trucos.</h2>
+
+      <div class="price-card fade d1">
+        <div class="price-amount">3,49€</div>
+        <span class="price-mo">al mes</span>
+
+        <ul class="price-list">
+          <li>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Menús semanales inteligentes
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Hospital de la Nevera con IA
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Lista de la compra automática
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Monedero de tarjetas de fidelización
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Perfil nutricional personalizado
+          </li>
+        </ul>
+
+        <p class="price-trial">14 días gratis para probarlo todo.</p>
+        <a href="#" class="btn btn-coral">Empezar gratis →</a>
+        <span class="price-cancel">Sin permanencia. Cancela cuando quieras.</span>
+      </div>
+
+      <p class="price-tagline fade d2">Menos de lo que cuesta la comida que tiras cada semana.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     NEWSLETTER
+══════════════════════════════════════════════════════════ -->
+<section id="newsletter" aria-label="Newsletter">
+  <div class="wrap">
+    <div class="nl-inner">
+      <h2 class="t-section fade">¿Aún no te decides?<br>Quédate cerca.</h2>
+      <p class="t-body fade d1">
+        Cada mes te enviamos recetas de temporada, trucos de cocina y novedades de bufy.
+        Sin spam, sin agobios. Solo cosas que merecen la pena.
+      </p>
+      <form class="nl-form fade d2" id="nl-form" novalidate>
+        <input
+          type="email"
+          class="nl-input"
+          id="nl-email"
+          placeholder="tucorreo@email.com"
+          autocomplete="email"
+          required
+        />
+        <button type="submit" class="btn btn-coral">Suscribirme →</button>
+      </form>
+      <p class="nl-ok" id="nl-ok">Perfecto. Te tendremos al tanto.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════════════ -->
+<footer id="footer" role="contentinfo">
+  <div class="wrap">
+    <div class="footer-top">
+      <div>
+        <span class="footer-logo">bufy</span>
+        <span class="footer-tagline">Cocina bien. Vive simple.</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://instagram.com/bufy.app" class="footer-social" target="_blank" rel="noopener noreferrer" aria-label="Instagram de bufy">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+          @bufy.app
+        </a>
+      </div>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-bottom">
+      <p class="footer-copy">© 2026 bufy. Todos los derechos reservados.</p>
+      <nav class="footer-legal" aria-label="Legal">
+        <a href="#">Política de privacidad</a>
+        <a href="#">Términos</a>
+        <a href="#">Contacto</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     JS — Fade-in + Newsletter
+══════════════════════════════════════════════════════════ -->
+<script>
+  // Fade-in on scroll
+  const fades = document.querySelectorAll('.fade');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -32px 0px' });
+  fades.forEach(el => io.observe(el));
+
+  // Newsletter form
+  // TODO: replace the console.log with your email service call
+  // Example with Resend:
+  //   fetch('/api/subscribe', { method: 'POST', body: JSON.stringify({ email }) })
+  // Example with Mailchimp embed: replace the form action with your Mailchimp URL
+  document.getElementById('nl-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const email = document.getElementById('nl-email').value.trim();
+    if (!email) return;
+
+    console.log('New subscriber:', email); // <- replace with real integration
+
+    this.style.display = 'none';
+    const ok = document.getElementById('nl-ok');
+    ok.style.display = 'block';
+  });
+</script>
+
+</body>
+</html>
