@@ -1,4 +1,2 @@
-import PlaceholderScreen from '../../src/screens/PlaceholderScreen';
-export default function Compra() {
-  return <PlaceholderScreen label="Lista de la compra" />;
-}
+import CompraScreen from '../../src/screens/CompraScreen';
+export default CompraScreen;

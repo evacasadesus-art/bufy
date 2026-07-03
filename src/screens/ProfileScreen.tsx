@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -15,7 +17,8 @@ type CookingMethod = 'bufy' | 'tradicional';
 type DietStyle = 'omnivoro' | 'vegetariano' | 'vegano';
 type Goal = 'mediterranea' | 'proteina' | 'hidratos';
 
-const ALLERGIES = ['Gluten', 'Lactosa', 'Frutos secos', 'Marisco', 'Huevo', 'Soja'];
+const MAIN_ALLERGIES = ['Gluten', 'Lactosa', 'Frutos secos', 'Marisco', 'Huevo', 'Soja'];
+const MORE_ALLERGIES = ['Melocotón', 'Fresas', 'Kiwi', 'Apio', 'Sésamo', 'Mostaza', 'Moluscos', 'Altramuz', 'Sulfitos'];
 
 const DIET_OPTIONS: { key: DietStyle; label: string }[] = [
   { key: 'omnivoro', label: 'Omnívoro' },
@@ -71,6 +74,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [cookingMethod, setCookingMethod] = useState<CookingMethod>('bufy');
   const [allergies, setAllergies] = useState<string[]>([]);
+  const [showMoreModal, setShowMoreModal] = useState(false);
   const [diet, setDiet] = useState<DietStyle>('omnivoro');
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -145,7 +149,7 @@ export default function ProfileScreen() {
         <SectionCard>
           <SectionTitle>Alergias e intolerancias</SectionTitle>
           <View style={styles.chipsWrap}>
-            {ALLERGIES.map(item => {
+            {MAIN_ALLERGIES.map(item => {
               const active = allergies.includes(item);
               return (
                 <TouchableOpacity
@@ -158,8 +162,62 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               );
             })}
+            {MORE_ALLERGIES.filter(item => allergies.includes(item)).map(item => (
+              <TouchableOpacity
+                key={item}
+                style={[styles.chip, styles.chipActive]}
+                onPress={() => toggleAllergy(item)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.chipText, styles.chipTextActive]}>{item}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.moreBtn}
+              onPress={() => setShowMoreModal(true)}
+              activeOpacity={0.7}
+            >
+              <Feather name="plus" size={13} color={Colors.coral} />
+              <Text style={styles.moreBtnText}>Más</Text>
+            </TouchableOpacity>
           </View>
         </SectionCard>
+
+        {/* Modal alérgenos adicionales */}
+        <Modal
+          visible={showMoreModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowMoreModal(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowMoreModal(false)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.modalTitle}>Más alérgenos</Text>
+              <View style={styles.chipsWrap}>
+                {MORE_ALLERGIES.map(item => {
+                  const active = allergies.includes(item);
+                  return (
+                    <TouchableOpacity
+                      key={item}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => toggleAllergy(item)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{item}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TouchableOpacity
+                style={styles.modalDoneBtn}
+                onPress={() => setShowMoreModal(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalDoneBtnText}>Listo</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {/* Sección 3: Estilo de dieta */}
         <SectionCard>
@@ -381,7 +439,7 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 40,
     height: 40,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
     backgroundColor: Colors.coral,
     justifyContent: 'center',
     alignItems: 'center',
@@ -401,5 +459,55 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.interRegular,
     fontSize: 13,
     color: Colors.carbon,
+  },
+
+  // Más button
+  moreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  moreBtnText: {
+    fontFamily: FontFamily.interMedium,
+    fontSize: 13,
+    color: Colors.coral,
+  },
+
+  // Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(38,38,38,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: Colors.blanco,
+    borderRadius: Radius.md,
+    padding: Spacing.lg,
+    width: '100%',
+    maxWidth: 480,
+    ...Shadow,
+  },
+  modalTitle: {
+    fontFamily: FontFamily.playfairSemiBold,
+    fontSize: 20,
+    color: Colors.carbon,
+    marginBottom: Spacing.md,
+  },
+  modalDoneBtn: {
+    marginTop: Spacing.lg,
+    alignSelf: 'flex-end',
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.coral,
+    borderRadius: Radius.full,
+  },
+  modalDoneBtnText: {
+    fontFamily: FontFamily.interSemiBold,
+    fontSize: 14,
+    color: Colors.blanco,
   },
 });

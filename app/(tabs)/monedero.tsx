@@ -1,4 +1,2 @@
-import PlaceholderScreen from '../../src/screens/PlaceholderScreen';
-export default function Monedero() {
-  return <PlaceholderScreen label="Tu monedero" />;
-}
+import MonederoScreen from '../../src/screens/MonederoScreen';
+export default MonederoScreen;

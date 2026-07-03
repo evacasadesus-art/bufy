@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -14,6 +14,7 @@ import {
   Inter_600SemiBold,
 } from '@expo-google-fonts/inter';
 import { Colors } from '../src/constants/tokens';
+import SplashOverlay from '../src/components/SplashOverlay';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,17 +26,15 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
   });
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
+  // Crema blank while fonts load — keeps colour consistent with splash
   if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.crema }}>
-        <ActivityIndicator color={Colors.coral} size="large" />
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: Colors.crema }} />;
   }
 
   return (
@@ -48,6 +47,7 @@ export default function RootLayout() {
           options={{ headerShown: false, animation: 'slide_from_right' }}
         />
       </Stack>
+      {!splashDone && <SplashOverlay onDone={() => setSplashDone(true)} />}
     </>
   );
 }
