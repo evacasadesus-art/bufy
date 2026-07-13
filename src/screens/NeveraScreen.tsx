@@ -5,12 +5,17 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { Colors, FontFamily, Radius, Spacing } from '../constants/tokens';
 
 type Status = 'red' | 'orange' | 'green';
+type Phase = 'initial' | 'loading' | 'result' | 'notice' | 'recipeLoading' | 'recipe';
+type NoticeContext = 'camera' | 'recipe';
 
 interface Ingredient {
   id: string;
@@ -18,18 +23,90 @@ interface Ingredient {
   status: Status;
 }
 
-const MOCK_INGREDIENTS: Ingredient[] = [
-  { id: '1', name: 'Espinacas', status: 'red' },
-  { id: '2', name: 'Yogur natural', status: 'orange' },
-  { id: '3', name: 'Zanahorias', status: 'green' },
-  { id: '4', name: 'Medio limón', status: 'orange' },
-];
+interface RawIngredient {
+  nombre: string;
+  urgencia: Status | 'aviso';
+}
+
+interface Recipe {
+  nombre: string;
+  tiempo: string;
+  necesitas: string[];
+  pasos: string[];
+}
+
+const ANALYZE_URL = 'https://bufy.vercel.app/api/analyze-fridge';
+const GENERATE_RECIPE_URL = 'https://bufy.vercel.app/api/generate-recipe';
+const MAX_IMAGE_WIDTH = 1024;
+const IMAGE_QUALITY = 0.7;
+const GENERIC_ERROR_MESSAGE = 'Vaya, algo ha fallado por aquí. ¿Probamos otra vez?';
+const PERMISSION_ERROR_MESSAGE =
+  'Necesito acceso a la cámara para poder ayudarte. Puedes activarlo en los ajustes del móvil.';
 
 const STATUS_COLOR: Record<Status, string> = {
   red: '#E24B4A',
   orange: '#EF9F27',
   green: '#639922',
 };
+
+async function compressImage(uri: string): Promise<string> {
+  const context = ImageManipulator.manipulate(uri);
+  context.resize({ width: MAX_IMAGE_WIDTH });
+  const rendered = await context.renderAsync();
+  const result = await rendered.saveAsync({
+    compress: IMAGE_QUALITY,
+    format: SaveFormat.JPEG,
+    base64: true,
+  });
+
+  if (!result.base64) {
+    throw new Error('No se pudo comprimir la imagen.');
+  }
+
+  return result.base64;
+}
+
+async function analyzeFridge(base64Image: string): Promise<RawIngredient[]> {
+  const response = await fetch(ANALYZE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: base64Image, mediaType: 'image/jpeg' }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data || data.error) {
+    throw new Error(data?.error ?? 'analyze_failed');
+  }
+
+  if (!Array.isArray(data.ingredients)) {
+    throw new Error('unexpected_shape');
+  }
+
+  return data.ingredients;
+}
+
+async function generateRecipe(ingredients: Ingredient[]): Promise<Recipe> {
+  const response = await fetch(GENERATE_RECIPE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ingredients: ingredients.map(item => ({ nombre: item.name, urgencia: item.status })),
+    }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data || data.error) {
+    throw new Error(data?.error ?? 'generate_recipe_failed');
+  }
+
+  if (!data.recipe || typeof data.recipe.nombre !== 'string') {
+    throw new Error('unexpected_shape');
+  }
+
+  return data.recipe;
+}
 
 function StatusDot({ status }: { status: Status }) {
   return <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] }]} />;
@@ -66,16 +143,77 @@ function IngredientRow({
 
 export default function NeveraScreen() {
   const insets = useSafeAreaInsets();
-  const [phase, setPhase] = useState<'initial' | 'result'>('initial');
-  const [ingredients, setIngredients] = useState<Ingredient[]>(MOCK_INGREDIENTS);
+  const [phase, setPhase] = useState<Phase>('initial');
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [noticeMessage, setNoticeMessage] = useState('');
+  const [noticeContext, setNoticeContext] = useState<NoticeContext>('camera');
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
 
   const removeIngredient = (id: string) =>
     setIngredients(prev => prev.filter(i => i.id !== id));
 
+  const showNotice = (message: string, context: NoticeContext = 'camera') => {
+    setNoticeMessage(message);
+    setNoticeContext(context);
+    setPhase('notice');
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        showNotice(PERMISSION_ERROR_MESSAGE);
+        return;
+      }
+
+      const capture = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.9,
+      });
+
+      if (capture.canceled || !capture.assets?.length) return;
+
+      setPhase('loading');
+
+      const base64Image = await compressImage(capture.assets[0].uri);
+      const raw = await analyzeFridge(base64Image);
+
+      if (raw.length === 1 && raw[0].urgencia === 'aviso') {
+        showNotice(raw[0].nombre);
+        return;
+      }
+
+      const parsed: Ingredient[] = raw
+        .filter((item): item is RawIngredient & { urgencia: Status } => item.urgencia !== 'aviso')
+        .map((item, index) => ({
+          id: `${Date.now()}-${index}`,
+          name: item.nombre,
+          status: item.urgencia,
+        }));
+
+      setIngredients(parsed);
+      setPhase('result');
+    } catch {
+      showNotice(GENERIC_ERROR_MESSAGE);
+    }
+  };
+
+  const handleSearchRecipe = async () => {
+    try {
+      setPhase('recipeLoading');
+      const generated = await generateRecipe(ingredients);
+      setRecipe(generated);
+      setPhase('recipe');
+    } catch {
+      showNotice(GENERIC_ERROR_MESSAGE, 'recipe');
+    }
+  };
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
 
-      {phase === 'initial' ? (
+      {phase === 'initial' && (
         /* ════ ESTAT 1: inicial ════ */
         <View style={styles.initialRoot}>
           <Text style={styles.mainTitle}>Hospital de la Nevera</Text>
@@ -89,15 +227,59 @@ export default function NeveraScreen() {
 
           <TouchableOpacity
             style={styles.ctaBtn}
-            onPress={() => setPhase('result')}
+            onPress={handleTakePhoto}
             activeOpacity={0.85}
           >
             <Feather name="camera" size={16} color={Colors.blanco} />
             <Text style={styles.ctaBtnText}>Hacer foto</Text>
           </TouchableOpacity>
         </View>
+      )}
 
-      ) : (
+      {phase === 'loading' && (
+        /* ════ ESTAT: carregant ════ */
+        <View style={styles.initialRoot}>
+          <ActivityIndicator size="small" color={Colors.piedra} />
+          <Text style={[styles.subtitle, styles.loadingText]}>Mirando qué tienes...</Text>
+        </View>
+      )}
+
+      {phase === 'notice' && (
+        /* ════ ESTAT: avís (foto dolenta o error) ════ */
+        <View style={styles.initialRoot}>
+          <Text style={styles.subtitle}>{noticeMessage}</Text>
+
+          {noticeContext === 'camera' ? (
+            <TouchableOpacity
+              style={styles.ctaBtn}
+              onPress={handleTakePhoto}
+              activeOpacity={0.85}
+            >
+              <Feather name="camera" size={16} color={Colors.blanco} />
+              <Text style={styles.ctaBtnText}>Hacer otra foto</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.ctaBtn}
+              onPress={handleSearchRecipe}
+              activeOpacity={0.85}
+            >
+              <Feather name="refresh-cw" size={16} color={Colors.blanco} />
+              <Text style={styles.ctaBtnText}>Reintentar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {phase === 'recipeLoading' && (
+        /* ════ ESTAT: generant recepta ════ */
+        <View style={styles.initialRoot}>
+          <ActivityIndicator size="small" color={Colors.piedra} />
+          <Text style={[styles.subtitle, styles.loadingText]}>Pensando qué cocinar...</Text>
+        </View>
+      )}
+
+      {phase === 'result' && (
         /* ════ ESTAT 2: resultat ════ */
         <View style={styles.resultRoot}>
           <ScrollView
@@ -126,7 +308,7 @@ export default function NeveraScreen() {
 
           {/* CTA ancorat a baix */}
           <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-            <TouchableOpacity style={styles.ctaBtn} onPress={() => {}} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.ctaBtn} onPress={handleSearchRecipe} activeOpacity={0.85}>
               <Text style={styles.ctaBtnText}>Buscar receta</Text>
               <Feather name="arrow-right" size={16} color={Colors.blanco} />
             </TouchableOpacity>
@@ -134,16 +316,49 @@ export default function NeveraScreen() {
         </View>
       )}
 
-      {/* Toggle dev */}
-      <TouchableOpacity
-        style={[styles.devToggle, { top: insets.top + 8 }]}
-        onPress={() => setPhase(p => (p === 'initial' ? 'result' : 'initial'))}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.devToggleText}>
-          {phase === 'initial' ? 'Ver resultado →' : '← Ver cámara'}
-        </Text>
-      </TouchableOpacity>
+      {phase === 'recipe' && recipe && (
+        /* ════ ESTAT 3: recepta comodín ════ */
+        <ScrollView
+          style={styles.resultScroll}
+          contentContainerStyle={styles.resultScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity
+            style={styles.backLink}
+            onPress={() => setPhase('result')}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="arrow-left" size={16} color={Colors.piedra} />
+            <Text style={styles.backLinkText}>Ingredientes</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.recipeName}>{recipe.nombre}</Text>
+
+          <View style={styles.timeCapsule}>
+            <Text style={styles.timeCapsuleText}>{recipe.tiempo}</Text>
+          </View>
+
+          <View style={styles.needsCard}>
+            <Text style={styles.needsTitle}>Necesitas</Text>
+            {recipe.necesitas.map((item, i) => (
+              <View key={i} style={styles.needsRow}>
+                <Text style={styles.needsBullet}>·</Text>
+                <Text style={styles.needsText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.stepsBlock}>
+            {recipe.pasos.map((step, i) => (
+              <View key={i} style={styles.stepRow}>
+                <Text style={styles.stepNumber}>{i + 1}</Text>
+                <Text style={styles.stepText}>{step}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -178,6 +393,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: Spacing.xl,
   },
+  loadingText: {
+    marginTop: Spacing.md,
+    marginBottom: 0,
+  },
   viewfinder: {
     width: 200,
     height: 260,
@@ -200,7 +419,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.crema,
   },
   resultScrollContent: {
-    paddingHorizontal: Spacing.md,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
   },
@@ -280,18 +502,93 @@ const styles = StyleSheet.create({
     color: Colors.blanco,
   },
 
-  /* ─── Toggle dev ─── */
-  devToggle: {
-    position: 'absolute',
-    right: Spacing.md,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(38,38,38,0.08)',
-    borderRadius: Radius.sm,
+  /* ─── Estat recepta comodín ─── */
+  backLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.xs,
+    marginBottom: Spacing.lg,
   },
-  devToggleText: {
+  backLinkText: {
     fontFamily: FontFamily.interMedium,
+    fontSize: 14,
+    color: Colors.piedra,
+  },
+  recipeName: {
+    fontFamily: FontFamily.playfairSemiBold,
+    fontSize: 28,
+    color: Colors.carbon,
+    lineHeight: 36,
+    marginBottom: Spacing.md,
+  },
+  timeCapsule: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.coral,
+    borderRadius: Radius.full,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginBottom: Spacing.xl,
+  },
+  timeCapsuleText: {
+    fontFamily: FontFamily.interSemiBold,
+    fontSize: 13,
+    color: Colors.blanco,
+  },
+  needsCard: {
+    backgroundColor: Colors.blanco,
+    borderRadius: 10,
+    padding: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  needsTitle: {
+    fontFamily: FontFamily.interSemiBold,
     fontSize: 11,
     color: Colors.piedra,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: Spacing.md,
+  },
+  needsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    marginBottom: 8,
+  },
+  needsBullet: {
+    fontFamily: FontFamily.interRegular,
+    fontSize: 16,
+    color: Colors.greige,
+    lineHeight: 22,
+  },
+  needsText: {
+    fontFamily: FontFamily.interRegular,
+    fontSize: 15,
+    color: Colors.carbon,
+    lineHeight: 22,
+    flex: 1,
+  },
+  stepsBlock: {
+    marginBottom: Spacing.xl,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  stepNumber: {
+    fontFamily: FontFamily.interSemiBold,
+    fontSize: 15,
+    color: Colors.greige,
+    lineHeight: 24,
+    width: 22,
+  },
+  stepText: {
+    fontFamily: FontFamily.interRegular,
+    fontSize: 15,
+    color: Colors.carbon,
+    lineHeight: 24,
+    flex: 1,
   },
 });

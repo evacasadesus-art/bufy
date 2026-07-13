@@ -17,6 +17,14 @@
     },
     "android": {
       "package": "com.bufy.app"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "bufy necesita acceder a tu cámara para fotografiar la nevera."
+        }
+      ]
+    ]
   }
 }
