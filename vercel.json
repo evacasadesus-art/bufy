@@ -1,5 +1,9 @@
 {
   "framework": null,
   "buildCommand": null,
-  "outputDirectory": null
+  "outputDirectory": null,
+  "rewrites": [
+    { "source": "/", "destination": "/landing/index.html" },
+    { "source": "/og-image.png", "destination": "/landing/og-image.png" }
+  ]
 }
